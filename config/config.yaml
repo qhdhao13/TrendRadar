@@ -8,25 +8,20 @@ crawler:
   use_proxy: false # 是否启用代理，false 时为关闭
   default_proxy: "http://127.0.0.1:10086"
 
-# 🔸 daily（当日汇总模式）
-#   • 推送时机：按时推送(默认每小时推送一次)
-#   • 显示内容：当日所有匹配新闻 + 新增新闻区域
-#   • 适用场景：日报总结、全面了解当日热点趋势
-#
-# 🔸 current（当前榜单模式）
-#   • 推送时机：按时推送(默认每小时推送一次)
-#   • 显示内容：当前榜单匹配新闻 + 新增新闻区域
-#   • 适用场景：实时热点追踪、了解当前最火的内容
-#
-# 🔸 incremental（增量监控模式）
-#   • 推送时机：有新增才推送
-#   • 显示内容：新出现的匹配频率词新闻
-#   • 适用场景：避免重复信息干扰
-
 # 推送模式选择
 report:
   mode: "daily" # 可选: "daily"|"incremental"|"current"
   rank_threshold: 5 # 排名高亮阈值
+
+# 核心修改：新增10个秦皇岛银行专属负面关键词（整合原关键词体系）
+keywords:
+  # 原有基础负面关键词（保留）
+  - 违规、处罚、罚款、监管约谈、责令整改、行政处罚、违规放贷、非法集资、洗钱、坏账、不良贷款、业绩下滑、亏损、资金链断裂、挤兑、破产、清算、债务违约、违纪、违法、落马、被查、双规、贪污、受贿、挪用公款、失联、辞职、乱收费、霸王条款、服务态度差、投诉维权、拒不赔付、虚假宣传、误导消费者、数据泄露、黑客攻击、账户被盗、系统故障、资金被盗、股东问题、子公司违规、合作方跑路、担保违约、被起诉、被执行
+  # 新增10个秦皇岛银行专属负面关键词（精准匹配银行场景）
+  - 秦皇岛银行 违规放贷、秦皇岛银行 内控失效、秦皇岛银行 股权质押风险、秦皇岛银行 客户资金挪用、秦皇岛银行 理财产品违约、秦皇岛银行 监管处罚、秦皇岛银行 不良率飙升、秦皇岛银行 高管失联、秦皇岛银行 违规吸储、秦皇岛银行 关联交易违规
+
+exclude_keywords:
+  - 正面报道、表彰、积极、利好、合规经营、业绩增长、战略合作、荣誉、获奖、升级、优化、创新
 
 notification:
   enable_notification: true # 是否启用通知功能，如果 false，则不发送手机通知
@@ -36,60 +31,39 @@ notification:
   batch_send_interval: 3 # 批次发送间隔（秒）
   feishu_message_separator: "━━━━━━━━━━━━━━━━━━━" # feishu 消息分割线
 
-  # 🕐 推送时间窗口控制（可选功能）
-  # 用途：限制推送的时间范围，避免非工作时间打扰
-  # 适用场景：
-  #   - 只想在工作日白天接收推送（如 09:00-18:00）
-  #   - 希望在晚上固定时间收到汇总（如 20:00-22:00）
+  # 推送时间窗口控制（可选功能）
   push_window:
     enabled: false  # 是否启用推送时间窗口控制，默认关闭
-    # 注意：GitHub Actions 执行时间不稳定，时间范围建议至少留足 2 小时
-    # 如果想要精准的定时推送，建议使用 Docker 部署在个人服务器上
     time_range:
       start: "20:00"  # 推送时间窗口开始（北京时间）
       end: "22:00"    # 推送时间窗口结束（北京时间）
     once_per_day: true  # 每天在时间窗口内只推送一次，如果 false，则窗口内每次执行都推送
     push_record_retention_days: 7  # 推送记录保留天数
 
-  # ⚠️⚠️⚠️ 重要安全警告 / IMPORTANT SECURITY WARNING ⚠️⚠️⚠️
-  #
-  # 🔴 请务必妥善保管好 webhooks，不要公开!!!
-  # 🔴 如果你以 fork 的方式将本项目部署在 GitHub 上，请勿在下面填写任何 webhooks
-  # 🔴 而是将 webhooks 填入 GitHub Secret（Settings → Secrets and variables → Actions）
-  # 🔴 否则：
-  #    - 轻则：手机上收到大量垃圾广告推送
-  #    - 重则：webhook 被滥用造成严重安全隐患（如恶意消息轰炸、钓鱼链接等）
-  #
-  # 🔴 NEVER expose webhooks publicly!!!
-  # 🔴 If deploying via GitHub fork, DO NOT fill webhooks below
-  # 🔴 Instead, add them to GitHub Secrets (Settings → Secrets and variables → Actions)
-  # 🔴 Consequences of exposure:
-  #    - Minor: Spam notifications flooding your devices
-  #    - Severe: Webhook abuse leading to security incidents (malicious messages, phishing links, etc.)
-  #
   webhooks:
+    # 仅保留飞书配置，其他推送方式置空
     feishu_url: "https://open.feishu.cn/open-apis/bot/v2/hook/b8ec98dd-dd1d-42b2-a2fe-6ef36c471183" # 飞书机器人的 webhook URL
-    dingtalk_url: "" # 钉钉机器人的 webhook URL
-    wework_url: "" # 企业微信机器人的 webhook URL
-    wework_msg_type: "markdown" # 企业微信消息类型：markdown(群机器人) 或 text(个人微信应用)
-    telegram_bot_token: "" # Telegram Bot Token
-    telegram_chat_id: "" # Telegram Chat ID
-    email_from: "" # 发件人邮箱地址
-    email_password: "" # 发件人邮箱密码或授权码
-    email_to: "" # 收件人邮箱地址，多个收件人用逗号分隔
-    email_smtp_server: "" # SMTP服务器地址（可选，留空自动识别）
-    email_smtp_port: "" # SMTP端口（可选，留空自动识别）
-    ntfy_server_url: "https://ntfy.sh" # ntfy服务器地址，默认使用公共服务，可改为自托管地址
-    ntfy_topic: "" # ntfy主题名称
-    ntfy_token: "" # ntfy访问令牌（可选，用于私有主题）
+    dingtalk_url: "" # 钉钉机器人（已禁用）
+    wework_url: "" # 企业微信机器人（已禁用）
+    wework_msg_type: "" # 企业微信消息类型（已禁用）
+    telegram_bot_token: "" # Telegram（已禁用）
+    telegram_chat_id: "" # Telegram（已禁用）
+    email_from: "" # 邮件推送（已禁用）
+    email_password: "" # 邮件推送（已禁用）
+    email_to: "" # 邮件推送（已禁用）
+    email_smtp_server: "" # 邮件推送（已禁用）
+    email_smtp_port: "" # 邮件推送（已禁用）
+    ntfy_server_url: "" # ntfy（已禁用）
+    ntfy_topic: "" # ntfy（已禁用）
+    ntfy_token: "" # ntfy（已禁用）
 
-# 用于让关注度更高的新闻在更前面显示，即用算法重新组合不同平台的热搜排序形成你侧重的热搜，合起来是 1 就行
+# 权重配置（保持不变）
 weight:
   rank_weight: 0.6 # 排名权重
   frequency_weight: 0.3 # 频次权重
   hotness_weight: 0.1 # 热度权重
 
-# name 可以定义任意名称，只具有显示作用，即使项目运行了几天后，忽然改掉 name 也不会影响代码的正常运行
+# 平台配置（保持不变）
 platforms:
   - id: "toutiao"
     name: "今日头条"
