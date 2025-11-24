@@ -35,28 +35,15 @@ notification:
   push_window:
     enabled: false  # 是否启用推送时间窗口控制，默认关闭
     time_range:
-      start: "20:00"  # 推送时间窗口开始（北京时间）
-      end: "22:00"    # 推送时间窗口结束（北京时间）
+      start: "13:00"  # 推送时间窗口开始（北京时间）
+      end: "15:00"    # 推送时间窗口结束（北京时间）
     once_per_day: true  # 每天在时间窗口内只推送一次，如果 false，则窗口内每次执行都推送
     push_record_retention_days: 7  # 推送记录保留天数
 
   webhooks:
     # 仅保留飞书配置，其他推送方式置空
     feishu_url: "https://open.feishu.cn/open-apis/bot/v2/hook/b8ec98dd-dd1d-42b2-a2fe-6ef36c471183" # 飞书机器人的 webhook URL
-    dingtalk_url: "" # 钉钉机器人（已禁用）
-    wework_url: "" # 企业微信机器人（已禁用）
-    wework_msg_type: "" # 企业微信消息类型（已禁用）
-    telegram_bot_token: "" # Telegram（已禁用）
-    telegram_chat_id: "" # Telegram（已禁用）
-    email_from: "" # 邮件推送（已禁用）
-    email_password: "" # 邮件推送（已禁用）
-    email_to: "" # 邮件推送（已禁用）
-    email_smtp_server: "" # 邮件推送（已禁用）
-    email_smtp_port: "" # 邮件推送（已禁用）
-    ntfy_server_url: "" # ntfy（已禁用）
-    ntfy_topic: "" # ntfy（已禁用）
-    ntfy_token: "" # ntfy（已禁用）
-
+    
 # 权重配置（保持不变）
 weight:
   rank_weight: 0.6 # 排名权重
