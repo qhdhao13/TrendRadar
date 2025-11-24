@@ -1,10 +1,12 @@
-name: Hot News Crawler
+name: 秦皇岛银行负面舆情监控
 
 on:
   schedule:
-    # 我们使用的是 github 官方提供的资源来进行的推送，而每个账号的资源是限额的，为了不被官方判定为滥用而面临封号的风险，不建议比半小时更低
-    - cron: "0 * * * *" # 每小时整点运行一次(实际有偏差) 或者 "*/30 * * * *" (每半小时执行一次) 或者 "*/30 0-14 * * *"(每天早上 8 点到晚上 10 点期间，每半小时运行一次)
-  workflow_dispatch:
+    # 每天凌晨1点执行（北京时间）
+    # GitHub Actions 使用 UTC 时间，北京时间 01:00 = UTC 17:00（前一天）
+    # 注意：GitHub Actions 的定时任务可能有最多 15 分钟的延迟
+    - cron: "0 17 * * *" # UTC 17:00 = 北京时间次日 01:00
+  workflow_dispatch: # 允许手动触发
 
 # 添加权限设置
 permissions:
@@ -48,20 +50,19 @@ jobs:
 
       - name: Run crawler
         env:
+          # 飞书推送配置（必需）
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          DINGTALK_WEBHOOK_URL: ${{ secrets.DINGTALK_WEBHOOK_URL }}
-          WEWORK_WEBHOOK_URL: ${{ secrets.WEWORK_WEBHOOK_URL }}
-          WEWORK_MSG_TYPE: ${{ secrets.WEWORK_MSG_TYPE }}
-          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          EMAIL_SMTP_SERVER: ${{ secrets.EMAIL_SMTP_SERVER }}
-          EMAIL_SMTP_PORT: ${{ secrets.EMAIL_SMTP_PORT }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          NTFY_SERVER_URL: ${{ secrets.NTFY_SERVER_URL }}
-          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          # 推送模式：增量模式（仅推送新增负面舆情）
+          REPORT_MODE: incremental
+          # 推送时间窗口：凌晨1点开始（已在 config.yaml 中配置）
+          PUSH_WINDOW_ENABLED: true
+          PUSH_WINDOW_START: "01:00"
+          PUSH_WINDOW_END: "23:59"
+          PUSH_WINDOW_ONCE_PER_DAY: false
+          # 启用爬虫和通知
+          ENABLE_CRAWLER: true
+          ENABLE_NOTIFICATION: true
+          # GitHub Actions 标识
           GITHUB_ACTIONS: true
         run: python main.py
 

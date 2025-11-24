@@ -1,45 +1,33 @@
+# ============================================
+# 秦皇岛银行负面舆情监控系统配置文件
+# ============================================
+
 app:
   version_check_url: "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version"
   show_version_update: true # 控制显示版本更新提示，如果 false，则不接受新版本提示
 
+# 爬虫配置
 crawler:
-  request_interval: 1000 # 请求间隔(毫秒)
+  request_interval: 1000 # 请求间隔(毫秒) - 抓取各平台数据的时间间隔
   enable_crawler: true # 是否启用爬取新闻功能，如果 false，则直接停止程序
   use_proxy: false # 是否启用代理，false 时为关闭
-  default_proxy: "http://127.0.0.1:10086"
+  default_proxy: "http://127.0.0.1:10086" # 代理地址（如果启用代理）
 
 # 推送模式选择
 report:
-  mode: "daily" # 可选: "daily"|"incremental"|"current"
+  mode: "incremental" # 可选: "daily"|"incremental"|"current" - 增量模式：仅推送新增负面舆情，零重复
   rank_threshold: 5 # 排名高亮阈值
 
-# 优化后仅保留 10 个负面关键词
-keywords:
-  - 违规
-  - 处罚
-  - 罚款
-  - 监管约谈
-  - 责令整改
-  - 内控失效
-  - 股权质押风险
-  - 客户资金挪用
-  - 理财产品违约
-  - 不良贷款
+# ============================================
+# 关键词配置说明
+# ============================================
+# 注意：关键词配置在 frequency_words.txt 文件中，不在本配置文件中
+# 请编辑 config/frequency_words.txt 来设置监控关键词
+# 当前监控：秦皇岛银行负面舆情（包含人员+负面关键词）
 
-exclude_keywords:
-  - 正面报道
-  - 表彰
-  - 积极
-  - 利好
-  - 合规经营
-  - 业绩增长
-  - 战略合作
-  - 荣誉
-  - 获奖
-  - 升级
-  - 优化
-  - 创新
-
+# ============================================
+# 通知推送配置
+# ============================================
 notification:
   enable_notification: true # 是否启用通知功能，如果 false，则不发送手机通知
   message_batch_size: 4000 # 消息分批大小（字节）(这个配置别动)
@@ -50,24 +38,42 @@ notification:
 
   # 推送时间窗口控制（可选功能）
   push_window:
-    enabled: false  # 是否启用推送时间窗口控制，默认关闭
+    enabled: true  # 是否启用推送时间窗口控制 - 已启用，每天凌晨1点开始推送
     time_range:
-      start: "13:00"  # 推送时间窗口开始（北京时间）
-      end: "15:00"    # 推送时间窗口结束（北京时间）
-    once_per_day: true  # 每天在时间窗口内只推送一次，如果 false，则窗口内每次执行都推送
-    push_record_retention_days: 7  # 推送记录保留天数
+      start: "01:00"  # 推送时间窗口开始（北京时间）- 凌晨1点开始
+      end: "23:59"    # 推送时间窗口结束（北京时间）- 当天结束
+    once_per_day: false  # 每天在时间窗口内只推送一次，如果 false，则窗口内每次执行都推送 - 设置为false以便及时推送负面舆情
+    push_record_retention_days: 30  # 推送记录保留天数 - 延长至30天便于追溯
 
   webhooks:
-    # 仅保留飞书配置，其他推送方式置空
-    feishu_url: "https://open.feishu.cn/open-apis/bot/v2/hook/b8ec98dd-dd1d-42b2-a2fe-6ef36c471183" # 飞书机器人的 webhook URL
+    # 秦皇岛银行负面舆情监控 - 仅保留飞书推送
+    feishu_url: "https://open.feishu.cn/open-apis/bot/v2/hook/b8ec98dd-dd1d-42b2-a2fe-6ef36c471183" # 飞书机器人的 webhook URL（请替换为你的飞书机器人地址）
+    dingtalk_url: ""  # 钉钉推送已禁用
+    wework_url: ""    # 企业微信推送已禁用
+    telegram_bot_token: ""  # Telegram推送已禁用
+    telegram_chat_id: ""    # Telegram推送已禁用
+    email_from: ""    # 邮件推送已禁用
+    email_password: ""  # 邮件推送已禁用
+    email_to: ""      # 邮件推送已禁用
+    email_smtp_server: ""  # 邮件推送已禁用
+    email_smtp_port: ""    # 邮件推送已禁用
+    ntfy_server_url: ""    # ntfy推送已禁用
+    ntfy_topic: ""        # ntfy推送已禁用
+    ntfy_token: ""        # ntfy推送已禁用
 
-# 权重配置（保持不变）
+# ============================================
+# 热点权重配置
+# ============================================
+# 用于计算新闻热度，权重越高影响越大
 weight:
-  rank_weight: 0.6 # 排名权重
-  frequency_weight: 0.3 # 频次权重
-  hotness_weight: 0.1 # 热度权重
+  rank_weight: 0.6 # 排名权重（60%）- 新闻在各平台的排名位置
+  frequency_weight: 0.3 # 频次权重（30%）- 新闻出现的次数
+  hotness_weight: 0.1 # 热度权重（10%）- 新闻的热度值
 
-# 平台配置（保持不变）
+# ============================================
+# 监控平台配置
+# ============================================
+# 系统将从以下11个平台抓取热点新闻
 platforms:
   - id: "toutiao"
     name: "今日头条"

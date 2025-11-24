@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.trendradar.daily</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/mac_qhdhao/TrendRadar/TrendRadar/run.sh</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/mac_qhdhao/TrendRadar/TrendRadar</string>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>1</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/trendradar.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/trendradar_error.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+    <!-- 电脑唤醒后，如果错过了执行时间，会在下次定时时间执行 -->
+    <!-- 注意：launchd 不会在电脑休眠时执行任务，也不会在唤醒后补执行 -->
+    <!-- 如果需要确保执行，建议：1) 防止电脑休眠 2) 使用服务器运行 3) 使用云服务 -->
+</dict>
+</plist>
+
