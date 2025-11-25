@@ -630,32 +630,75 @@ def load_frequency_words(
     filter_words = []
 
     for group in word_groups:
-        words = [word.strip() for word in group.split("\n") if word.strip()]
+        # 过滤掉注释行（以 # 开头的行）
+        lines = [line.strip() for line in group.split("\n") if line.strip() and not line.strip().startswith("#")]
+
+        # 检查是否是 @ALL 标记（匹配所有新闻）
+        if lines and lines[0] == "@ALL":
+            processed_groups.append(
+                {
+                    "required": [],
+                    "normal": [],
+                    "group_key": "全部热点新闻",
+                    "match_all": True,  # 特殊标记：匹配所有新闻
+                }
+            )
+            continue
 
         group_required_words = []
         group_normal_words = []
         group_filter_words = []
 
-        for word in words:
-            if word.startswith("!"):
-                filter_words.append(word[1:])
-                group_filter_words.append(word[1:])
-            elif word.startswith("+"):
-                group_required_words.append(word[1:])
+        # 处理每一行，支持 | 分隔符格式
+        for line in lines:
+            # 检查是否包含 | 分隔符（新格式）
+            if "|" in line:
+                # 使用 | 分隔符格式：必须词部分 | 普通词部分1 | 普通词部分2 | ...
+                parts = [part.strip() for part in line.split("|")]
+                for part in parts:
+                    if not part:
+                        continue
+                    # 使用 , 分隔不同的词
+                    words_in_part = [w.strip() for w in part.split(",") if w.strip()]
+                    for word in words_in_part:
+                        if word.endswith("+"):
+                            # 必须词（以 + 结尾）
+                            group_required_words.append(word[:-1])
+                        elif word.endswith("!"):
+                            # 过滤词（以 ! 结尾）
+                            filter_words.append(word[:-1])
+                            group_filter_words.append(word[:-1])
+                        else:
+                            # 普通词
+                            group_normal_words.append(word)
             else:
-                group_normal_words.append(word)
+                # 旧格式：每行一个词
+                if line.startswith("!"):
+                    filter_words.append(line[1:])
+                    group_filter_words.append(line[1:])
+                elif line.startswith("+"):
+                    group_required_words.append(line[1:])
+                else:
+                    group_normal_words.append(line)
 
         if group_required_words or group_normal_words:
+            # 生成组名：优先使用普通词，如果没有则使用必须词
             if group_normal_words:
-                group_key = " ".join(group_normal_words)
+                # 取前几个词作为组名
+                group_key = " ".join(group_normal_words[:3]) if len(group_normal_words) > 3 else " ".join(group_normal_words)
             else:
-                group_key = " ".join(group_required_words)
+                group_key = " ".join(group_required_words[:3]) if len(group_required_words) > 3 else " ".join(group_required_words)
+            
+            # 如果组名太长，使用简化版本
+            if len(group_key) > 50:
+                group_key = group_key[:47] + "..."
 
             processed_groups.append(
                 {
                     "required": group_required_words,
                     "normal": group_normal_words,
                     "group_key": group_key,
+                    "match_all": False,
                 }
             )
 
@@ -961,6 +1004,10 @@ def matches_word_groups(
 
     # 词组匹配检查
     for group in word_groups:
+        # 如果组标记为 match_all，则匹配所有新闻
+        if group.get("match_all", False):
+            return True
+
         required_words = group["required"]
         normal_words = group["normal"]
 
@@ -1153,17 +1200,22 @@ def count_word_frequency(
             source_mobile_url = title_data.get("mobileUrl", "")
 
             # 找到匹配的词组
+            # 优先匹配非 match_all 组（舆情组），如果没有匹配到，再匹配 match_all 组（全部热点新闻）
             title_lower = title.lower()
+            matched_group = None
+            
+            # 先尝试匹配非 match_all 组（舆情组优先）
             for group in word_groups:
+                if group.get("match_all", False):
+                    continue  # 跳过 match_all 组，优先匹配舆情组
+                
                 required_words = group["required"]
                 normal_words = group["normal"]
 
                 # 如果是"全部新闻"模式，所有标题都匹配第一个（唯一的）词组
                 if len(word_groups) == 1 and word_groups[0]["group_key"] == "全部新闻":
-                    group_key = group["group_key"]
-                    word_stats[group_key]["count"] += 1
-                    if source_id not in word_stats[group_key]["titles"]:
-                        word_stats[group_key]["titles"][source_id] = []
+                    matched_group = group
+                    break
                 else:
                     # 原有的匹配逻辑
                     if required_words:
@@ -1182,10 +1234,21 @@ def count_word_frequency(
                         if not any_normal_present:
                             continue
 
-                    group_key = group["group_key"]
-                    word_stats[group_key]["count"] += 1
-                    if source_id not in word_stats[group_key]["titles"]:
-                        word_stats[group_key]["titles"][source_id] = []
+                    matched_group = group
+                    break
+            
+            # 如果没有匹配到非 match_all 组，再尝试匹配 match_all 组（全部热点新闻）
+            if not matched_group:
+                for group in word_groups:
+                    if group.get("match_all", False):
+                        matched_group = group
+                        break
+            
+            if matched_group:
+                group_key = matched_group["group_key"]
+                word_stats[group_key]["count"] += 1
+                if source_id not in word_stats[group_key]["titles"]:
+                    word_stats[group_key]["titles"][source_id] = []
 
                 first_time = ""
                 last_time = ""
@@ -2655,36 +2718,85 @@ def render_feishu_content(
     """渲染飞书内容"""
     text_content = ""
 
-    if report_data["stats"]:
-        text_content += f"📊 **热点词汇统计**\n\n"
-
-    total_count = len(report_data["stats"])
-
+    # 分离舆情组和热点组
+    # 舆情组：第一个组（秦皇岛银行负面舆情）
+    # 热点组：其他组（通常是"全部热点新闻"）
+    sentiment_stats = []
+    hot_news_stats = []
+    
+    # 按顺序分离：第一个组是舆情组，其余是热点组
     for i, stat in enumerate(report_data["stats"]):
-        word = stat["word"]
-        count = stat["count"]
-
-        sequence_display = f"<font color='grey'>[{i + 1}/{total_count}]</font>"
-
-        if count >= 10:
-            text_content += f"🔥 {sequence_display} **{word}** : <font color='red'>{count}</font> 条\n\n"
-        elif count >= 5:
-            text_content += f"📈 {sequence_display} **{word}** : <font color='orange'>{count}</font> 条\n\n"
+        if i == 0:
+            # 第一个组是舆情组
+            sentiment_stats.append(stat)
         else:
-            text_content += f"📌 {sequence_display} **{word}** : {count} 条\n\n"
-
-        for j, title_data in enumerate(stat["titles"], 1):
-            formatted_title = format_title_for_platform(
-                "feishu", title_data, show_source=True
-            )
-            text_content += f"  {j}. {formatted_title}\n"
-
-            if j < len(stat["titles"]):
-                text_content += "\n"
-
-        if i < len(report_data["stats"]) - 1:
+            # 其他组是热点组
+            hot_news_stats.append(stat)
+    
+    # 第一部分：负面舆情（如果有）
+    if sentiment_stats:
+        text_content += f"🚨 **秦皇岛银行负面舆情监控**\n\n"
+        for i, stat in enumerate(sentiment_stats):
+            word = stat["word"]
+            count = stat["count"]
+            
+            if count >= 10:
+                text_content += f"🔥 **{word}** : <font color='red'>{count}</font> 条\n\n"
+            elif count >= 5:
+                text_content += f"📈 **{word}** : <font color='orange'>{count}</font> 条\n\n"
+            else:
+                text_content += f"📌 **{word}** : {count} 条\n\n"
+            
+            for j, title_data in enumerate(stat["titles"], 1):
+                formatted_title = format_title_for_platform(
+                    "feishu", title_data, show_source=True
+                )
+                text_content += f"  {j}. {formatted_title}\n"
+                
+                if j < len(stat["titles"]):
+                    text_content += "\n"
+            
+            if i < len(sentiment_stats) - 1:
+                text_content += f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n"
+    else:
+        # 如果没有舆情，显示提示
+        text_content += f"✅ **秦皇岛银行负面舆情监控**\n\n"
+        text_content += f"<font color='green'>本日没有舆情</font>\n\n"
+    
+    # 第二部分：全部热点新闻（如果有）
+    if hot_news_stats:
+        if text_content:
             text_content += f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n"
-
+        
+        text_content += f"📊 **全部热点新闻**\n\n"
+        total_count = len(hot_news_stats)
+        
+        for i, stat in enumerate(hot_news_stats):
+            word = stat["word"]
+            count = stat["count"]
+            
+            sequence_display = f"<font color='grey'>[{i + 1}/{total_count}]</font>"
+            
+            if count >= 10:
+                text_content += f"🔥 {sequence_display} **{word}** : <font color='red'>{count}</font> 条\n\n"
+            elif count >= 5:
+                text_content += f"📈 {sequence_display} **{word}** : <font color='orange'>{count}</font> 条\n\n"
+            else:
+                text_content += f"📌 {sequence_display} **{word}** : {count} 条\n\n"
+            
+            for j, title_data in enumerate(stat["titles"], 1):
+                formatted_title = format_title_for_platform(
+                    "feishu", title_data, show_source=True
+                )
+                text_content += f"  {j}. {formatted_title}\n"
+                
+                if j < len(stat["titles"]):
+                    text_content += "\n"
+            
+            if i < len(hot_news_stats) - 1:
+                text_content += f"\n{CONFIG['FEISHU_MESSAGE_SEPARATOR']}\n\n"
+    
+    # 如果没有内容，显示默认提示
     if not text_content:
         if mode == "incremental":
             mode_text = "增量模式下暂无新增匹配的热点词汇"
