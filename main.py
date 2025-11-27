@@ -1889,6 +1889,86 @@ def render_html_content(
                 letter-spacing: 0.5px;
             }
             
+            /* 秦皇岛银行舆情警报样式 - 红色显著标记 */
+            .news-item.alert-bank {
+                background: #fef2f2 !important;
+                border-left: 4px solid #dc2626 !important;
+                border-bottom: 2px solid #fecaca !important;
+                padding: 16px 12px !important;
+                margin-bottom: 24px !important;
+                box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15) !important;
+                animation: alertPulse 2s ease-in-out infinite;
+            }
+            
+            .news-item.alert-bank::before {
+                content: "⚠️ 银行舆情";
+                position: absolute;
+                top: 12px;
+                right: 0;
+                background: #dc2626;
+                color: #ffffff;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 4px 8px;
+                border-radius: 4px;
+                letter-spacing: 0.5px;
+                z-index: 10;
+                box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+            }
+            
+            .news-item.alert-bank.new::before {
+                right: 45px;
+            }
+            
+            .news-item.alert-bank .news-title {
+                color: #dc2626 !important;
+                font-weight: 600 !important;
+                font-size: 16px !important;
+            }
+            
+            .news-item.alert-bank .news-title a {
+                color: #dc2626 !important;
+                font-weight: 600 !important;
+            }
+            
+            .news-item.alert-bank .news-title a:hover {
+                color: #991b1b !important;
+                text-decoration: underline;
+            }
+            
+            @keyframes alertPulse {
+                0%, 100% {
+                    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+                }
+                50% {
+                    box-shadow: 0 2px 12px rgba(220, 38, 38, 0.25);
+                }
+            }
+            
+            /* 新增新闻区域的警报样式 */
+            .new-item.alert-bank {
+                background: #fef2f2 !important;
+                border-left: 4px solid #dc2626 !important;
+                padding: 12px 8px !important;
+                margin-bottom: 12px !important;
+                border-radius: 4px;
+                box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15) !important;
+            }
+            
+            .new-item.alert-bank .new-item-title {
+                color: #dc2626 !important;
+                font-weight: 600 !important;
+            }
+            
+            .new-item.alert-bank .new-item-title a {
+                color: #dc2626 !important;
+                font-weight: 600 !important;
+            }
+            
+            .new-item.alert-bank .new-item-title a:hover {
+                color: #991b1b !important;
+            }
+            
             .news-number {
                 color: #999;
                 font-size: 13px;
@@ -2244,9 +2324,17 @@ def render_html_content(
             for j, title_data in enumerate(stat["titles"], 1):
                 is_new = title_data.get("is_new", False)
                 new_class = "new" if is_new else ""
+                
+                # 检测是否包含"秦皇岛银行"关键词，添加警报样式
+                title_text = title_data.get("title", "")
+                is_bank_alert = "秦皇岛银行" in title_text
+                alert_class = "alert-bank" if is_bank_alert else ""
+                
+                # 组合所有CSS类
+                all_classes = " ".join(filter(None, [new_class, alert_class]))
 
                 html += f"""
-                    <div class="news-item {new_class}">
+                    <div class="news-item {all_classes}">
                         <div class="news-number">{j}</div>
                         <div class="news-content">
                             <div class="news-header">
@@ -2331,6 +2419,11 @@ def render_html_content(
             # 为新增新闻也添加序号
             for idx, title_data in enumerate(source_data["titles"], 1):
                 ranks = title_data.get("ranks", [])
+                
+                # 检测是否包含"秦皇岛银行"关键词，添加警报样式
+                title_text = title_data.get("title", "")
+                is_bank_alert = "秦皇岛银行" in title_text
+                alert_class = "alert-bank" if is_bank_alert else ""
 
                 # 处理新增新闻的排名显示
                 rank_class = ""
@@ -2349,7 +2442,7 @@ def render_html_content(
                     rank_text = "?"
 
                 html += f"""
-                        <div class="new-item">
+                        <div class="new-item {alert_class}">
                             <div class="new-item-number">{idx}</div>
                             <div class="new-item-rank {rank_class}">{rank_text}</div>
                             <div class="new-item-content">
